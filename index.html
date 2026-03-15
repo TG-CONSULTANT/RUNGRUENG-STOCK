@@ -17,7 +17,252 @@
 <body>
     <!-- แก้ไขตรงนี้: เพิ่ม allow="geolocation" เพื่อเปิดสิทธิ์ GPS -->
     <iframe 
-        src="https://script.google.com/macros/s/AKfycbw_lRznFC3g_OWt4AouesJWOCDwhejV_L_3TMghYTyYaJMFfR_wYFklNDsM-OPiAE0jTw/exec"
+        src="<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.css">
+  <style>
+    :root { --bg-input: #f0f7ff; font-size: 110%; }
+    body { background-color: #f4f7f9; font-family: 'Prompt', sans-serif; color: #333; }
+    .card { border-radius: 15px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+    .form-control, .form-select { background-color: var(--bg-input) !important; border: 1px solid #d1e3f8; padding: 0.6rem 0.8rem; }
+    .awesomplete { width: 100%; }
+    
+    .col-fixed-1 { width: 45%; } 
+    .col-fixed-2 { width: 30%; text-align: center; } 
+    .col-fixed-3 { width: 25%; text-align: right; }
+    
+    .table tr.low-stock td { 
+      background-color: #ffcccc !important; 
+      color: #d90429 !important; 
+      font-weight: bold; 
+    }
+    
+    .loading { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.8); z-index:9999; justify-content:center; align-items:center; }
+    .nav-pills .nav-link { padding: 0.8rem 0.5rem; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="loading" id="loader"><div class="spinner-border text-primary"></div></div>
+
+  <div class="container py-3">
+    <h2 class="text-center mb-4 fw-bold text-primary">RUNGRUANG - STOCK</h2>
+    
+    <ul class="nav nav-pills nav-fill mb-3 bg-white p-2 rounded-pill shadow-sm" id="pills-tab">
+      <li class="nav-item"><button class="nav-link active rounded-pill" data-bs-toggle="pill" data-bs-target="#tab1">รับเข้า</button></li>
+      <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#tab2">เบิกออก</button></li>
+      <li class="nav-item"><button class="nav-link rounded-pill" data-bs-toggle="pill" data-bs-target="#tab3">ดูข้อมูล</button></li>
+    </ul>
+
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="tab1">
+        <div class="card p-3">
+          <div class="mb-3"><label class="form-label fw-bold">ผู้บันทึก</label><select id="rec_user" class="form-select"></select></div>
+          <div class="mb-3"><label class="form-label fw-bold">รายการสินค้า</label><input id="rec_item" class="form-control" placeholder="ค้นหารายการ..." onfocus="this.value=''"></div>
+          <div id="rec_table_container" style="display:none" class="mb-3">
+            <table class="table table-sm table-bordered">
+              <thead><tr class="table-secondary"><th class="col-fixed-1">รายการ</th><th class="col-fixed-2">ตำแหน่ง</th><th class="col-fixed-3">คงเหลือ</th></tr></thead>
+              <tbody id="rec_stock_table"></tbody>
+            </table>
+          </div>
+          <div class="mb-3"><label class="form-label fw-bold">ตำแหน่งรับเข้า</label><select id="rec_loc" class="form-select"></select></div>
+          <div class="mb-3"><label class="form-label fw-bold">จำนวนรับเข้า</label><input type="number" id="rec_qty" class="form-control text-end"></div>
+          <div class="mb-4"><label class="form-label fw-bold">หมายเหตุ</label><input type="text" id="rec_note" class="form-control" placeholder="ระบุหมายเหตุ (ถ้ามี)"></div>
+          <button onclick="submitReceive()" class="btn btn-primary w-100 py-3 shadow-sm fw-bold">บันทึกรับเข้า</button>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="tab2">
+        <div class="card p-3">
+          <div class="mb-3"><label class="form-label fw-bold">ผู้บันทึก</label><select id="with_user" class="form-select"></select></div>
+          <div class="mb-3"><label class="form-label fw-bold">ผู้เบิก</label><input id="with_requester" class="form-control" placeholder="พิมพ์ชื่อผู้เบิก..." onfocus="this.value=''"></div>
+          <div class="mb-3"><label class="form-label fw-bold">ตำแหน่งที่เบิก</label><select id="with_loc" class="form-select" onchange="filterWithdrawTable(this.value)"></select></div>
+          <div class="table-responsive mb-3">
+            <table class="table table-sm align-middle">
+              <thead><tr class="table-secondary"><th class="col-fixed-1">รายการ</th><th class="col-fixed-3">คงเหลือ</th><th style="width: 100px; text-align:center;">เบิก</th></tr></thead>
+              <tbody id="with_table"></tbody>
+            </table>
+          </div>
+          <div class="mb-4"><label class="form-label fw-bold">หมายเหตุ</label><input type="text" id="with_note" class="form-control" placeholder="ระบุหมายเหตุ (ถ้ามี)"></div>
+          <button onclick="submitWithdraw()" class="btn btn-danger w-100 py-3 fw-bold shadow-sm">บันทึกเบิกออก</button>
+        </div>
+      </div>
+
+      <div class="tab-pane fade" id="tab3">
+        <div class="card p-3 mb-3">
+          <label class="form-label fw-bold">ค้นหารายการ</label>
+          <div class="d-flex gap-2 mb-3">
+            <div style="flex-grow:1"><input id="view_search" class="form-control" placeholder="พิมพ์ชื่อรายการ..." onfocus="this.value=''"></div>
+            <button class="btn btn-primary px-4 fw-bold" onclick="filterView()">ค้นหา</button>
+          </div>
+          <div id="view_results" style="display:none">
+            <p class="badge bg-info text-dark mb-2">สรุปภาพรวม</p>
+            <table class="table table-sm table-bordered mb-3">
+              <thead><tr class="table-light"><th class="col-fixed-1">รายการ</th><th class="col-fixed-2">SS</th><th class="col-fixed-3">คงเหลือ</th></tr></thead>
+              <tbody id="v_t1"></tbody>
+            </table>
+            <p class="badge bg-info text-dark mb-2">แยกตามตำแหน่ง</p>
+            <table class="table table-sm table-bordered">
+              <thead><tr class="table-light"><th class="col-fixed-1">รายการ</th><th class="col-fixed-2">ตำแหน่ง</th><th class="col-fixed-3">คงเหลือ</th></tr></thead>
+              <tbody id="v_t2"></tbody>
+            </table>
+            <button class="btn btn-outline-secondary btn-sm w-100 mt-3" onclick="resetView()">← กลับไปดูสต็อกทั้งหมด & Refresh</button>
+          </div>
+        </div>
+        <div class="card p-3" id="full_stock_container">
+          <h6 class="fw-bold border-bottom pb-2">รายการสต็อกทั้งหมด</h6>
+          <div class="table-responsive" style="max-height: 450px;"><table class="table table-sm table-hover"><thead class="sticky-top bg-white shadow-sm"><tr><th class="col-fixed-1">รายการ</th><th class="col-fixed-2">SS</th><th class="col-fixed-3">คงเหลือ</th></tr></thead><tbody id="full_stock_table"></tbody></table></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/awesomplete/1.1.5/awesomplete.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    let globalData = {};
+    let aweRec, aweView, aweReq;
+
+    window.onload = () => { initApp(); };
+
+    function showLoading(show) { document.getElementById('loader').style.display = show ? 'flex' : 'none'; }
+
+    // ฟังก์ชันดึงข้อมูลทั้งหมดมาเก็บไว้ใน Client
+    function initApp() {
+      showLoading(true);
+      google.script.run.withSuccessHandler(data => {
+        globalData = data;
+        
+        // Setup Selects
+        const userOpts = data.users.map(u => `<option value="${u}">${u}</option>`).join('');
+        const locOpts = '<option value="">เลือกตำแหน่ง</option>' + data.locations.map(l => `<option value="${l}">${l}</option>`).join('');
+        document.getElementById('rec_user').innerHTML = userOpts;
+        document.getElementById('with_user').innerHTML = userOpts;
+        document.getElementById('rec_loc').innerHTML = locOpts;
+        document.getElementById('with_loc').innerHTML = locOpts;
+
+        // Setup Awesompletes
+        if(!aweRec) aweRec = new Awesomplete(document.getElementById('rec_item'), { list: data.items, minChars: 1 });
+        if(!aweReq) aweReq = new Awesomplete(document.getElementById('with_requester'), { list: data.requesters, minChars: 1 });
+        
+        // ดึงรายการจาก Col G (Index 6) สำหรับหน้าดูข้อมูล
+        const gItems = [...new Set(data.stockRaw.slice(1).map(r => r[6]).filter(String))];
+        if(!aweView) {
+          aweView = new Awesomplete(document.getElementById('view_search'), { list: gItems, minChars: 1 });
+        } else {
+          aweView.list = gItems;
+        }
+
+        document.getElementById('rec_item').addEventListener('awesomplete-selectcomplete', (e) => filterRecStock(e.text.value));
+        
+        // Render Full Stock
+        const summary = data.stockRaw.slice(1).map(r => [r[6], r[7], r[8]]).filter(r => r[0]);
+        renderStockTable('full_stock_table', summary, true);
+        
+        showLoading(false);
+      }).getAllData();
+    }
+
+    function renderStockTable(targetId, rows, checkSS) {
+      document.getElementById(targetId).innerHTML = rows.map(r => {
+        let rowClass = (checkSS && Number(r[2]) < Number(r[1])) ? "low-stock" : "";
+        return `<tr class="${rowClass}"><td class="col-fixed-1">${r[0]}</td><td class="col-fixed-2">${r[1]}</td><td class="col-fixed-3">${Number(r[2]).toLocaleString()}</td></tr>`;
+      }).join('');
+    }
+
+    // กรองข้อมูลรับเข้า (Client-side)
+    function filterRecStock(itemName) {
+      const filtered = globalData.stockRaw.filter(r => r[1] === itemName).map(r => [r[1], r[2], r[3]]);
+      renderStockTable('rec_stock_table', filtered, false);
+      document.getElementById('rec_table_container').style.display = 'block';
+    }
+
+    // กรองตารางเบิกออก พร้อมระบบป้องกันเบิกเกิน
+    function filterWithdrawTable(loc) {
+      if(!loc) return;
+      const filtered = globalData.stockRaw.filter(r => r[2] === loc);
+      document.getElementById('with_table').innerHTML = filtered.map(r => `
+        <tr>
+          <td class="col-fixed-1">${r[1]}</td>
+          <td class="col-fixed-3">${r[3]}</td>
+          <td class="text-center">
+            <input type="number" class="form-control form-control-sm text-end with-qty" 
+              data-name="${r[1]}" max="${r[3]}" min="0" value="0" 
+              oninput="validateQty(this)">
+          </td>
+        </tr>`).join('');
+    }
+
+    // ฟังก์ชันตรวจสอบจำนวนเบิก
+    function validateQty(input) {
+      const max = Number(input.max);
+      const val = Number(input.value);
+      if (val > max) {
+        alert("ขออภัย! ยอดคงเหลือไม่เพียงพอ (คงเหลือ: " + max + ")");
+        input.value = max;
+      } else if (val < 0) {
+        input.value = 0;
+      }
+    }
+
+    // กรองหน้าดูข้อมูล (Client-side)
+    function filterView() {
+      const itemName = document.getElementById('view_search').value;
+      if(!itemName) return;
+      const t1 = globalData.stockRaw.filter(r => r[6] === itemName).map(r => [r[6], r[7], r[8]]);
+      const t2 = globalData.stockRaw.filter(r => r[1] === itemName).map(r => [r[1], r[2], r[3]]);
+      renderStockTable('v_t1', t1, true);
+      renderStockTable('v_t2', t2, false);
+      document.getElementById('view_results').style.display = 'block';
+      document.getElementById('full_stock_container').style.display = 'none';
+    }
+
+    function resetView() {
+      document.getElementById('view_results').style.display = 'none';
+      document.getElementById('full_stock_container').style.display = 'block';
+      document.getElementById('view_search').value = '';
+      initApp();
+    }
+
+    function submitReceive() {
+      const payload = { user: document.getElementById('rec_user').value, item: document.getElementById('rec_item').value, loc: document.getElementById('rec_loc').value, qty: document.getElementById('rec_qty').value, note: document.getElementById('rec_note').value };
+      if(!payload.item || !payload.loc || !payload.qty) return alert('กรุณากรอกข้อมูลหลักให้ครบ');
+      showLoading(true);
+      google.script.run.withSuccessHandler(msg => {
+        alert(msg);
+        document.getElementById('rec_item').value = '';
+        document.getElementById('rec_qty').value = '';
+        document.getElementById('rec_note').value = '';
+        document.getElementById('rec_table_container').style.display = 'none';
+        initApp();
+      }).saveReceive(payload);
+    }
+
+    function submitWithdraw() {
+      const data = {
+        user: document.getElementById('with_user').value,
+        requester: document.getElementById('with_requester').value,
+        loc: document.getElementById('with_loc').value,
+        note: document.getElementById('with_note').value,
+        items: Array.from(document.querySelectorAll('.with-qty')).map(i => ({ name: i.dataset.name, qty: Number(i.value) }))
+      };
+      if(!data.requester || data.items.every(i => i.qty <= 0)) return alert('กรุณาระบุผู้เบิกและจำนวนสินค้า');
+      showLoading(true);
+      google.script.run.withSuccessHandler(msg => {
+        alert(msg);
+        document.getElementById('with_requester').value = '';
+        document.getElementById('with_note').value = '';
+        document.getElementById('with_loc').value = '';
+        document.getElementById('with_table').innerHTML = '';
+        initApp();
+      }).saveWithdraw(data);
+    }
+  </script>
+</body>
+</html>"
         allow="geolocation">
     </iframe>
 </body>
